@@ -786,21 +786,35 @@
 
         // Start focus session
         function startFocusSession() {
-            focusMinutes = parseInt(document.getElementById('minutes').value) || 25;
-            focusSeconds = parseInt(document.getElementById('seconds').value) || 0;
-            totalSeconds = focusMinutes * 60 + focusSeconds;
-
+            // In cat mode, don't read from inputs - use already set values
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            
+            if (mode !== 'cat') {
+                // Normal mode - read from inputs
+                focusMinutes = parseInt(document.getElementById('minutes').value) || 25;
+                focusSeconds = parseInt(document.getElementById('seconds').value) || 0;
+                totalSeconds = focusMinutes * 60 + focusSeconds;
+            }
+            // In cat mode, totalSeconds is already set by loadFromURL()
+            
+            console.log('Starting focus session with:', totalSeconds, 'seconds'); // Debug
+            
             if (isRunning) {
                 // Stop current session
                 clearInterval(timerInterval);
                 isRunning = false;
-                document.getElementById('statusText').textContent = 'Focus session stopped.';
+                if (mode !== 'cat') {
+                    document.getElementById('statusText').textContent = 'Focus session stopped.';
+                }
                 return;
             }
-
+        
             // Start new session
             isRunning = true;
-            document.getElementById('statusText').textContent = 'Focus session started! Switch to Focus tab and keep your phone still.';
+            if (mode !== 'cat') {
+                document.getElementById('statusText').textContent = 'Focus session started! Switch to Focus tab and keep your phone still.';
+            }
             
             timerInterval = setInterval(() => {
                 if (totalSeconds > 0) {
@@ -810,11 +824,13 @@
                     // Session complete
                     clearInterval(timerInterval);
                     isRunning = false;
-                    document.getElementById('statusText').textContent = '🎉 Focus session complete! Great job!';
+                    if (mode !== 'cat') {
+                        document.getElementById('statusText').textContent = '🎉 Focus session complete! Great job!';
+                    }
                     showCompletionMessage();
                 }
             }, 1000);
-
+        
             updateTimerDisplay();
         }
 
