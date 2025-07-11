@@ -949,74 +949,51 @@
             const minutes = parseInt(document.getElementById('minutes').value) || 25;
             const seconds = parseInt(document.getElementById('seconds').value) || 0;
             
-            // Create URL for cat-only mode
             const currentUrl = window.location.href.split('?')[0];
             const focusUrl = `${currentUrl}?mode=cat&minutes=${minutes}&seconds=${seconds}`;
             
+            // Show the URL so we can see it
             const container = document.getElementById('qrContainer');
             container.style.display = 'block';
             
             container.innerHTML = `
+                <div style="background: white; color: black; padding: 10px; margin: 10px 0; word-break: break-all;">
+                    URL: ${focusUrl}
+                </div>
                 <canvas id="qrcode"></canvas>
-                <p style="font-size: 0.9em; margin-top: 10px;">📱 Scan for cat-only focus mode</p>
+                <p style="font-size: 0.9em;">Test this URL in your browser first</p>
             `;
             
-            try {
-                const qr = new QRious({
-                    element: document.getElementById('qrcode'),
-                    value: focusUrl,
-                    size: 200,
-                    background: 'white',
-                    foreground: 'black'
-                });
-                console.log('QR code generated for cat-only mode');
-            } catch (err) {
-                console.error('QR Error:', err);
-            }
+            const qr = new QRious({
+                element: document.getElementById('qrcode'),
+                value: focusUrl,
+                size: 200,
+                background: 'white',
+                foreground: 'black'
+            });
         }
-
         function loadFromURL() {
+            console.log('loadFromURL called');
+            console.log('Current URL:', window.location.href);
+            
             const urlParams = new URLSearchParams(window.location.search);
             const mode = urlParams.get('mode');
-            const minutes = urlParams.get('minutes');
-            const seconds = urlParams.get('seconds');
             
-            // Cat-only mode - hide settings, show only focus
+            console.log('Mode detected:', mode);
+            
             if (mode === 'cat') {
-                // Hide tab navigation
+                console.log('CAT MODE ACTIVATED');
+                alert('Cat mode detected!'); // Temporary debug
+                
+                // Hide everything except focus
                 document.querySelector('.tab-nav').style.display = 'none';
+                document.getElementById('settings').style.display = 'none';
+                document.getElementById('focus').style.display = 'block';
                 
-                // Show only focus tab
-                document.getElementById('settings').classList.remove('active');
-                document.getElementById('focus').classList.add('active');
-                
-                // Set timer values
-                if (minutes) focusMinutes = parseInt(minutes);
-                if (seconds) focusSeconds = parseInt(seconds);
-                
-                totalSeconds = focusMinutes * 60 + focusSeconds;
-                updateTimerDisplay();
-                
-                // Auto-start timer
-                setTimeout(() => {
-                    startFocusSession();
-                }, 500);
-                
-                return; // Exit early for cat mode
+                return;
             }
             
-            // Normal mode (existing code)
-            if (minutes) {
-                document.getElementById('minutes').value = minutes;
-                focusMinutes = parseInt(minutes);
-            }
-            if (seconds) {
-                document.getElementById('seconds').value = seconds;
-                focusSeconds = parseInt(seconds);
-            }
-            
-            totalSeconds = focusMinutes * 60 + focusSeconds;
-            updateTimerDisplay();
+            console.log('Normal mode');
         }
     </script>
 </body>
