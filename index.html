@@ -884,6 +884,58 @@
             lastActivity = Date.now();
         }
 
+        function generateQR() {
+            const minutes = parseInt(document.getElementById('minutes').value) || 25;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+            
+            const currentUrl = window.location.href.split('?')[0];
+            const focusUrl = `${currentUrl}?mode=cat&minutes=${minutes}&seconds=${seconds}`;
+            
+            // Show the URL so we can see it
+            const container = document.getElementById('qrContainer');
+            container.style.display = 'block';
+            
+            container.innerHTML = `
+                <div style="background: white; color: black; padding: 10px; margin: 10px 0; word-break: break-all;">
+                    URL: ${focusUrl}
+                </div>
+                <canvas id="qrcode"></canvas>
+                <p style="font-size: 0.9em;">Test this URL in your browser first</p>
+            `;
+            
+            const qr = new QRious({
+                element: document.getElementById('qrcode'),
+                value: focusUrl,
+                size: 200,
+                background: 'white',
+                foreground: 'black'
+            });
+        }
+        
+        function loadFromURL() {
+            console.log('loadFromURL called');
+            console.log('Current URL:', window.location.href);
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            
+            console.log('Mode detected:', mode);
+            
+            if (mode === 'cat') {
+                console.log('CAT MODE ACTIVATED');
+                alert('Cat mode detected!'); // Temporary debug
+                
+                // Hide everything except focus
+                document.querySelector('.tab-nav').style.display = 'none';
+                document.getElementById('settings').style.display = 'none';
+                document.getElementById('focus').style.display = 'block';
+                
+                return;
+            }
+            
+            console.log('Normal mode');
+        }
+
         // Event listeners for activity detection
         document.addEventListener('touchstart', wakeUpCat, { passive: false });
         document.addEventListener('touchmove', wakeUpCat, { passive: false });
@@ -944,56 +996,16 @@
                 updateTimerDisplay();
             }
         });
-
-        function generateQR() {
-            const minutes = parseInt(document.getElementById('minutes').value) || 25;
-            const seconds = parseInt(document.getElementById('seconds').value) || 0;
-            
-            const currentUrl = window.location.href.split('?')[0];
-            const focusUrl = `${currentUrl}?mode=cat&minutes=${minutes}&seconds=${seconds}`;
-            
-            // Show the URL so we can see it
-            const container = document.getElementById('qrContainer');
-            container.style.display = 'block';
-            
-            container.innerHTML = `
-                <div style="background: white; color: black; padding: 10px; margin: 10px 0; word-break: break-all;">
-                    URL: ${focusUrl}
-                </div>
-                <canvas id="qrcode"></canvas>
-                <p style="font-size: 0.9em;">Test this URL in your browser first</p>
-            `;
-            
-            const qr = new QRious({
-                element: document.getElementById('qrcode'),
-                value: focusUrl,
-                size: 200,
-                background: 'white',
-                foreground: 'black'
-            });
-        }
-        function loadFromURL() {
-            console.log('loadFromURL called');
-            console.log('Current URL:', window.location.href);
-            
-            const urlParams = new URLSearchParams(window.location.search);
-            const mode = urlParams.get('mode');
-            
-            console.log('Mode detected:', mode);
-            
-            if (mode === 'cat') {
-                console.log('CAT MODE ACTIVATED');
-                alert('Cat mode detected!'); // Temporary debug
-                
-                // Hide everything except focus
-                document.querySelector('.tab-nav').style.display = 'none';
-                document.getElementById('settings').style.display = 'none';
-                document.getElementById('focus').style.display = 'block';
-                
-                return;
-            }
-            
-            console.log('Normal mode');
+        
+         // Call loadFromURL when page loads
+        window.addEventListener('load', loadFromURL);
+        
+        // Also call it immediately in case DOM is already ready
+        document.addEventListener('DOMContentLoaded', loadFromURL);
+        
+        // Force immediate check for cat mode
+        if (window.location.search.includes('mode=cat')) {
+            loadFromURL();
         }
     </script>
 </body>
