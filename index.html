@@ -949,16 +949,16 @@
             const minutes = parseInt(document.getElementById('minutes').value) || 25;
             const seconds = parseInt(document.getElementById('seconds').value) || 0;
             
-            // Create URL that goes directly to focus tab
+            // Create URL for cat-only mode
             const currentUrl = window.location.href.split('?')[0];
-            const focusUrl = `${currentUrl}?minutes=${minutes}&seconds=${seconds}&tab=focus&autostart=true`;
+            const focusUrl = `${currentUrl}?mode=cat&minutes=${minutes}&seconds=${seconds}`;
             
             const container = document.getElementById('qrContainer');
             container.style.display = 'block';
             
             container.innerHTML = `
                 <canvas id="qrcode"></canvas>
-                <p style="font-size: 0.9em; margin-top: 10px;">📱 Scan to open Focus Cat directly</p>
+                <p style="font-size: 0.9em; margin-top: 10px;">📱 Scan for cat-only focus mode</p>
             `;
             
             try {
@@ -969,7 +969,7 @@
                     background: 'white',
                     foreground: 'black'
                 });
-                console.log('QR code generated for direct focus page');
+                console.log('QR code generated for cat-only mode');
             } catch (err) {
                 console.error('QR Error:', err);
             }
@@ -977,11 +977,35 @@
 
         function loadFromURL() {
             const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
             const minutes = urlParams.get('minutes');
             const seconds = urlParams.get('seconds');
-            const tab = urlParams.get('tab');
-            const autostart = urlParams.get('autostart');
             
+            // Cat-only mode - hide settings, show only focus
+            if (mode === 'cat') {
+                // Hide tab navigation
+                document.querySelector('.tab-nav').style.display = 'none';
+                
+                // Show only focus tab
+                document.getElementById('settings').classList.remove('active');
+                document.getElementById('focus').classList.add('active');
+                
+                // Set timer values
+                if (minutes) focusMinutes = parseInt(minutes);
+                if (seconds) focusSeconds = parseInt(seconds);
+                
+                totalSeconds = focusMinutes * 60 + focusSeconds;
+                updateTimerDisplay();
+                
+                // Auto-start timer
+                setTimeout(() => {
+                    startFocusSession();
+                }, 500);
+                
+                return; // Exit early for cat mode
+            }
+            
+            // Normal mode (existing code)
             if (minutes) {
                 document.getElementById('minutes').value = minutes;
                 focusMinutes = parseInt(minutes);
@@ -991,21 +1015,8 @@
                 focusSeconds = parseInt(seconds);
             }
             
-            // Update timer display
             totalSeconds = focusMinutes * 60 + focusSeconds;
             updateTimerDisplay();
-            
-            // Auto-switch to focus tab and start timer
-            if (tab === 'focus') {
-                showTab('focus');
-                document.querySelector('.tab-btn').classList.remove('active');
-                document.querySelectorAll('.tab-btn')[1].classList.add('active');
-                
-                // Auto-start the timer if autostart=true
-                if (autostart === 'true') {
-                    startFocusSession();
-                }
-            }
         }
     </script>
 </body>
