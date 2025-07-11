@@ -946,32 +946,22 @@
         });
 
         function generateQR() {
-            console.log('Generate QR clicked');
-            
             const minutes = parseInt(document.getElementById('minutes').value) || 25;
             const seconds = parseInt(document.getElementById('seconds').value) || 0;
-            const currentUrl = window.location.href.split('?')[0];
-            const focusUrl = `${currentUrl}?minutes=${minutes}&seconds=${seconds}&tab=focus`;
             
-            console.log('QR URL:', focusUrl);
+            // Create URL that goes directly to focus tab
+            const currentUrl = window.location.href.split('?')[0];
+            const focusUrl = `${currentUrl}?minutes=${minutes}&seconds=${seconds}&tab=focus&autostart=true`;
             
             const container = document.getElementById('qrContainer');
             container.style.display = 'block';
             
-            // Check if QRious is available
-            if (typeof QRious === 'undefined') {
-                console.error('QRious library not loaded');
-                // Fallback to text URL
-                container.innerHTML = `
-                    <p>Copy this URL to your phone:</p>
-                    <input type="text" value="${focusUrl}" style="width: 100%; padding: 10px; margin: 10px 0; color: black;" readonly onclick="this.select()">
-                    <p style="font-size: 0.9em;">Tap to select and copy</p>
-                `;
-                return;
-            }
+            container.innerHTML = `
+                <canvas id="qrcode"></canvas>
+                <p style="font-size: 0.9em; margin-top: 10px;">📱 Scan to open Focus Cat directly</p>
+            `;
             
             try {
-                // Create QR code with QRious
                 const qr = new QRious({
                     element: document.getElementById('qrcode'),
                     value: focusUrl,
@@ -979,15 +969,42 @@
                     background: 'white',
                     foreground: 'black'
                 });
-                console.log('QR code generated successfully!');
+                console.log('QR code generated for direct focus page');
             } catch (err) {
-                console.error('QR Generation Error:', err);
-                // Fallback to text URL
-                container.innerHTML = `
-                    <p>Copy this URL to your phone:</p>
-                    <input type="text" value="${focusUrl}" style="width: 100%; padding: 10px; margin: 10px 0; color: black;" readonly onclick="this.select()">
-                    <p style="font-size: 0.9em;">Tap to select and copy</p>
-                `;
+                console.error('QR Error:', err);
+            }
+        }
+
+        function loadFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const minutes = urlParams.get('minutes');
+            const seconds = urlParams.get('seconds');
+            const tab = urlParams.get('tab');
+            const autostart = urlParams.get('autostart');
+            
+            if (minutes) {
+                document.getElementById('minutes').value = minutes;
+                focusMinutes = parseInt(minutes);
+            }
+            if (seconds) {
+                document.getElementById('seconds').value = seconds;
+                focusSeconds = parseInt(seconds);
+            }
+            
+            // Update timer display
+            totalSeconds = focusMinutes * 60 + focusSeconds;
+            updateTimerDisplay();
+            
+            // Auto-switch to focus tab and start timer
+            if (tab === 'focus') {
+                showTab('focus');
+                document.querySelector('.tab-btn').classList.remove('active');
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                
+                // Auto-start the timer if autostart=true
+                if (autostart === 'true') {
+                    startFocusSession();
+                }
             }
         }
     </script>
