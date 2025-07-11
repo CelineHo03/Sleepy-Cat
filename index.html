@@ -173,7 +173,6 @@
 
         .cat-scene.awake {
             transform: scale(1.1);
-            animation: angry-shake 0.5s infinite;
         }
 
         @keyframes angry-shake {
@@ -193,22 +192,6 @@
             transition: all 0.3s ease;
         }
 
-        /* Angry cat - reddish tint */
-        .cat-scene.awake .cat {
-            background-color: #e67e22;
-            box-shadow: 0 0 10px rgba(211, 47, 47, 0.3);
-        }
-
-        .cat-scene.awake .ear {
-            background-color: #e67e22;
-            box-shadow: 23px -3px #e67e22;
-        }
-
-        .cat-scene.awake .body {
-            background-color: #e67e22;
-            box-shadow: 0 0 10px rgba(211, 47, 47, 0.3);
-            animation: angry-body 0.4s infinite;
-        }
 
         @keyframes angry-body {
             0%, 100% { transform: scale(1, 1); }
@@ -257,12 +240,12 @@
         /* Angry eyes */
         .cat-scene.awake .eye,
         .cat-scene.awake .eye:before {
-            height: 10px;
-            width: 8px;
+            height: 6px;
+            width: 12px;
             border-radius: 0;
-            border: 2px solid #d32f2f;
-            background-color: #d32f2f;
-            transform: rotate(-15deg);
+            border: 2px solid #2c2c2c;  /* ← Normal dark color */
+            background-color: #2c2c2c;  /* ← Normal dark color */
+            transform: rotate(-10deg);   /* ← Less aggressive angle */
         }
 
         .cat-scene.awake .eye:before {
@@ -705,41 +688,54 @@
             lastActivity = now;
         }
 
-        // Wake up cat
-        function wakeUpCat() {
-            const catScene = document.getElementById('catScene');
-            const wakeMessage = document.getElementById('wakeMessage');
-            
-            catScene.className = 'cat-scene awake';
-            wakeMessage.innerHTML = '😡 Your cat is FURIOUS!<br><small>You disturbed its peaceful sleep!</small>';
-            wakeMessage.classList.add('show');
-            
-            // Add haptic feedback on mobile
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
-            }
-            
-            // Play a simple angry sound using Web Audio API
+        function playMeowSound() {
             try {
+                // Check if audio is supported and user has interacted
+                if (!window.AudioContext && !window.webkitAudioContext) {
+                    console.log('Web Audio API not supported');
+                    return;
+                }
+                
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Check if audio context is allowed
+                if (audioContext.state === 'suspended') {
+                    console.log('Audio context suspended - need user interaction');
+                    return;
+                }
+                
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
                 
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
                 
-                oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-                oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.2);
+                oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.3);
                 
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                gainNode.gain.setValueAtTime(0.05, audioContext.currentTime); // Quieter
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
                 
                 oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.2);
+                oscillator.stop(audioContext.currentTime + 0.3);
+                
             } catch (err) {
-                console.log('Audio not supported');
+                console.log('Audio error:', err.message);
+                // Fail silently - don't break the app
             }
+        }
+
+
+        // Wake up cat
+        function wakeUpCat() {
+            const catScene = document.getElementById('catScene');
+            const wakeMessage = document.getElementById('wakeMessage');
             
+            catScene.className = 'cat-scene awake';
+            wakeMessage.innerHTML = '😾 Meow! Your cat is annoyed<br><small>Let it go back to sleep</small>';
+            wakeMessage.classList.add('show');
+            
+
             // Clear existing timeout
             clearTimeout(activityTimeout);
             
@@ -756,6 +752,7 @@
             lastActivity = Date.now();
         }
 
+
         // Event listeners for activity detection
         document.addEventListener('touchstart', wakeUpCat);
         document.addEventListener('touchmove', wakeUpCat);
@@ -770,6 +767,46 @@
             if (e.target.closest('.focus-container')) {
                 e.preventDefault();
             }
+        }, {passive : fasle});
+
+        // Detect when user switches apps or tabs
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // User switched away from the app
+                wakeUpCat();
+                
+                // Optional: Mark that they left the app
+                console.log('User left the app - cat is not happy!');
+                
+                // You could also update the message to be more specific
+                const wakeMessage = document.getElementById('wakeMessage');
+                wakeMessage.innerHTML = '😾 Caught you! You left the app!<br><small>Stay focused on your task</small>';
+                wakeMessage.classList.add('show');
+                
+            } else {
+                // User returned to the app
+                console.log('User returned to the app');
+                
+                // Show a return message
+                const wakeMessage = document.getElementById('wakeMessage');
+                wakeMessage.innerHTML = '👀 Welcome back!<br><small>Your cat noticed you were gone</small>';
+                wakeMessage.classList.add('show');
+                
+                // Hide the message after 3 seconds
+                setTimeout(() => {
+                    wakeMessage.classList.remove('show');
+                }, 3000);
+            }
+        });
+
+                // Even detect when they just blur the window
+        window.addEventListener('blur', function() {
+            wakeUpCat();
+            console.log('Window lost focus - caught!');
+        });
+
+        window.addEventListener('focus', function() {
+            console.log('Window regained focus');
         });
 
         // Initialize
