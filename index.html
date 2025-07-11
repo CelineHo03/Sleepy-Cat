@@ -949,16 +949,20 @@
             const minutes = parseInt(document.getElementById('minutes').value) || 25;
             const seconds = parseInt(document.getElementById('seconds').value) || 0;
             
+            console.log('QR Generation - Reading from inputs:', minutes, 'minutes', seconds, 'seconds'); // Debug
+            
             // Create URL for cat-only mode
             const currentUrl = window.location.href.split('?')[0];
             const focusUrl = `${currentUrl}?mode=cat&minutes=${minutes}&seconds=${seconds}`;
+            
+            console.log('QR URL generated:', focusUrl); // Debug
             
             const container = document.getElementById('qrContainer');
             container.style.display = 'block';
             
             container.innerHTML = `
                 <canvas id="qrcode"></canvas>
-                <p style="font-size: 0.9em; margin-top: 10px;">📱 Scan for cat-only focus mode</p>
+                <p style="font-size: 0.9em; margin-top: 10px;">📱 Timer: ${minutes}m ${seconds}s</p>
             `;
             
             try {
