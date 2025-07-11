@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Focus Cat - Sleep Mode</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -185,7 +186,6 @@
         }
 
         .cat-scene.awake {
-            transform: scale(3);
             animation: angry-shake 1.5s infinite alternate;
         }
 
@@ -346,7 +346,7 @@
         }
 
         @keyframes sleep {
-            50% { transform: scale(0.9, 1.05); }
+            50% { transform: scale(1.05, 0.95); }
         }
 
         .tail {
@@ -515,7 +515,7 @@
             }
             
             .cat-scene {
-                transform: scale(0.6);
+                transform: scale(0.65);
                 margin: -20px 0;
             }
             
@@ -531,7 +531,7 @@
             
             .focus-timer {
                 font-size: 1.3em;
-                bottom: 10px;
+                bottom: 40px;
             }
             
             .wake-message {
@@ -576,12 +576,12 @@
             }
             
             .cat-scene {
-                transform: scale(0.5);
+                transform: scale(1);
                 margin: -30px 0;
             }
             
             .cat-scene.awake {
-                transform: scale(0.55);
+                transform: scale(1);
             }
             
             .focus-timer {
@@ -610,7 +610,7 @@
             }
             
             .cat-scene {
-                transform: scale(0.4);
+                transform: scale(0.45);
                 margin: -40px 0;
             }
             
@@ -651,7 +651,7 @@
             }
             
             .cat-scene {
-                transform: scale(0.5);
+                transform: scale(1);
                 margin: -20px 0;
             }
             
@@ -689,6 +689,12 @@
                 
                 <button class="btn" onclick="startFocusSession()">Start Focus Session</button>
                 <button class="btn" onclick="resetTimer()" style="background: linear-gradient(45deg, #ff6b6b, #ee5a52);">Reset Timer</button>
+                <button class="btn" onclick="generateQR()" style="background: linear-gradient(45deg, #9b59b6, #8e44ad);">📱 Generate QR Code</button>
+
+                <div id="qrContainer" style="display: none; margin: 20px 0;">
+                    <canvas id="qrcode"></canvas>
+                    <p style="font-size: 0.9em; margin-top: 10px;">Scan with your phone to open Focus Cat</p>
+                </div>
                 
                 <div class="timer-display" id="timerDisplay">25:00</div>
                 
@@ -938,6 +944,52 @@
                 updateTimerDisplay();
             }
         });
+
+        function generateQR() {
+            console.log('Generate QR clicked');
+            
+            const minutes = parseInt(document.getElementById('minutes').value) || 25;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+            const currentUrl = window.location.href.split('?')[0];
+            const focusUrl = `${currentUrl}?minutes=${minutes}&seconds=${seconds}&tab=focus`;
+            
+            console.log('QR URL:', focusUrl);
+            
+            const container = document.getElementById('qrContainer');
+            container.style.display = 'block';
+            
+            // Check if QRious is available
+            if (typeof QRious === 'undefined') {
+                console.error('QRious library not loaded');
+                // Fallback to text URL
+                container.innerHTML = `
+                    <p>Copy this URL to your phone:</p>
+                    <input type="text" value="${focusUrl}" style="width: 100%; padding: 10px; margin: 10px 0; color: black;" readonly onclick="this.select()">
+                    <p style="font-size: 0.9em;">Tap to select and copy</p>
+                `;
+                return;
+            }
+            
+            try {
+                // Create QR code with QRious
+                const qr = new QRious({
+                    element: document.getElementById('qrcode'),
+                    value: focusUrl,
+                    size: 200,
+                    background: 'white',
+                    foreground: 'black'
+                });
+                console.log('QR code generated successfully!');
+            } catch (err) {
+                console.error('QR Generation Error:', err);
+                // Fallback to text URL
+                container.innerHTML = `
+                    <p>Copy this URL to your phone:</p>
+                    <input type="text" value="${focusUrl}" style="width: 100%; padding: 10px; margin: 10px 0; color: black;" readonly onclick="this.select()">
+                    <p style="font-size: 0.9em;">Tap to select and copy</p>
+                `;
+            }
+        }
     </script>
 </body>
 </html>
