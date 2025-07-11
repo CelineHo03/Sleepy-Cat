@@ -212,7 +212,7 @@
 
         /* Angry ears - flatten back */
         .cat-scene.awake .ear {
-            transform: rotate(-15deg);
+            transform: rotate(-1deg);
             box-shadow: 23px -3px #f19b1a;
         }
 
@@ -237,19 +237,30 @@
             left: 30px;
         }
 
-        /* Angry eyes */
+        /* Fixed - Both eyes same size */
         .cat-scene.awake .eye,
         .cat-scene.awake .eye:before {
-            height: 6px;
-            width: 12px;
-            border-radius: 0;
-            border: 2px solid #2c2c2c;  /* ← Normal dark color */
-            background-color: #2c2c2c;  /* ← Normal dark color */
-            transform: rotate(-10deg);   /* ← Less aggressive angle */
+            height: 9px;
+            width: 13px;
+            border-radius: 0 0 20px 20px;
+            border: 2px solid #2c2c2c;
+            background-color: #2c2c2c;
+            /* Reset any inherited properties */
+            box-sizing: border-box;
+            position: absolute;
+        }
+
+        .cat-scene.awake .eye {
+            transform: rotate(-3deg);
+            transform-origin: center center;
         }
 
         .cat-scene.awake .eye:before {
-            transform: rotate(15deg);
+            transform: rotate(-5deg);
+            transform-origin: center center;
+            /* Explicitly reset position to prevent inheritance issues */
+            top: 0;
+            left: 28px;
         }
 
         /* Angry eyebrows */
@@ -266,17 +277,6 @@
             transition: all 0.3s ease;
         }
 
-        .cat-scene.awake .eye:after {
-            opacity: 1;
-            transform: rotate(-20deg);
-            background-color: #d32f2f;
-        }
-
-        .cat-scene.awake .eye:before:after {
-            opacity: 1;
-            transform: rotate(20deg);
-            background-color: #d32f2f;
-        }
 
         .nose {
             background-color: #ffffff;
@@ -475,7 +475,7 @@
         /* Wake up message */
         .wake-message {
             position: absolute;
-            top: 50%;
+            top: 80%;
             left: 50%;
             transform: translate(-50%, -50%);
             background: rgba(255, 107, 107, 0.9);
@@ -769,16 +769,25 @@
             }
         }, {passive : fasle});
 
-        // Detect when user switches apps or tabs
+        // Enhanced detection for iOS/iPhone
+        let wasHidden = false;
+        let hiddenTime = 0;
+        
         document.addEventListener('visibilitychange', function() {
             if (document.hidden) {
                 // User switched away from the app
+                wasHidden = true;
+                hiddenTime = Date.now();
                 wakeUpCat();
                 
-                // Optional: Mark that they left the app
+                // Count focus break if session is running
+                if (isRunning) {
+                    focusBreaks++;
+                    updateStatusText();
+                }
+                
                 console.log('User left the app - cat is not happy!');
                 
-                // You could also update the message to be more specific
                 const wakeMessage = document.getElementById('wakeMessage');
                 wakeMessage.innerHTML = '😾 Caught you! You left the app!<br><small>Stay focused on your task</small>';
                 wakeMessage.classList.add('show');
@@ -787,15 +796,34 @@
                 // User returned to the app
                 console.log('User returned to the app');
                 
-                // Show a return message
-                const wakeMessage = document.getElementById('wakeMessage');
-                wakeMessage.innerHTML = '👀 Welcome back!<br><small>Your cat noticed you were gone</small>';
-                wakeMessage.classList.add('show');
-                
-                // Hide the message after 3 seconds
-                setTimeout(() => {
-                    wakeMessage.classList.remove('show');
-                }, 3000);
+                if (wasHidden) {
+                    const timeAway = Math.round((Date.now() - hiddenTime) / 1000);
+                    
+                    // Track away time if session is running
+                    if (isRunning) {
+                        totalAwayTime += timeAway;
+                        updateStatusText();
+                    }
+                    
+                    const wakeMessage = document.getElementById('wakeMessage');
+                    
+                    if (timeAway < 5) {
+                        wakeMessage.innerHTML = '👀 Quick peek away?<br><small>Your cat noticed!</small>';
+                    } else if (timeAway < 30) {
+                        wakeMessage.innerHTML = `😾 You were gone for ${timeAway} seconds!<br><small>Your cat is disappointed</small>`;
+                    } else {
+                        wakeMessage.innerHTML = `😡 Gone for ${timeAway} seconds?!<br><small>Your cat is FURIOUS!</small>`;
+                    }
+                    
+                    wakeMessage.classList.add('show');
+                    
+                    // Hide the message after 3 seconds
+                    setTimeout(() => {
+                        wakeMessage.classList.remove('show');
+                    }, 3000);
+                    
+                    wasHidden = false;
+                }
             }
         });
 
