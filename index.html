@@ -17,9 +17,9 @@
 
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #1f2964;
+            background-color: #4a4a4a;
             min-height: 100vh;
-            color: white;
+            color: rgb(0, 0, 0);
             overflow: hidden;
             margin: 0;
             padding: 0;
@@ -53,7 +53,7 @@
         }
 
         .tab-btn.active {
-            color: white;
+            color: rgb(2, 2, 2);
             background: rgba(255, 255, 255, 0.1);
         }
 
@@ -78,7 +78,7 @@
             justify-content: center;
             align-items: center;
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f2fcff 0%, rgb(219 253 255) 100%);
         }
 
         .settings-panel {
@@ -86,7 +86,7 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 20px;
-            padding: 40px;
+            padding: 25px;
             text-align: center;
             max-width: 400px;
             width: 90%;
@@ -96,7 +96,7 @@
         .settings-panel h2 {
             margin-bottom: 30px;
             font-size: 2em;
-            background: linear-gradient(45deg, #ff6b6b, #ffd93d);
+            background: linear-gradient(45deg, #535252, #404040);;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -113,10 +113,10 @@
         .time-input input {
             width: 80px;
             padding: 15px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(59, 59, 59, 0.3);
             border-radius: 10px;
             background: rgba(255, 255, 255, 0.1);
-            color: white;
+            color: rgb(0, 0, 0);
             font-size: 1.2em;
             text-align: center;
         }
@@ -128,7 +128,7 @@
 
         .time-input span {
             font-size: 1.2em;
-            color: rgba(255, 255, 255, 0.8);
+            color: rgba(0, 0, 0, 0.8);
         }
 
         .btn {
@@ -153,7 +153,7 @@
             font-size: 2.5em;
             font-weight: bold;
             margin: 20px 0;
-            color: #ffd93d;
+            color: #c54e4e;
         }
 
         .status-text {
@@ -168,7 +168,7 @@
         .focus-container {
             height: 100%;
             width: 100%;
-            background-color: #1f2964;
+            background-color: #313131;
             position: relative;
             display: flex;
             justify-content: center;
@@ -774,6 +774,8 @@
         let disturbanceCount = 0;
         let maxDisturbances = 2;
         let sessionBroken = false;
+        let lastWakeTime = 0;
+        let wakeDebounceTime = 1000;
 
         // Tab switching
         function showTab(tabName) {
@@ -925,77 +927,83 @@
 
         // Wake up cat
         function wakeUpCat() {
+            const now = Date.now();
+            const timeSinceLastWake = now - lastWakeTime;
+
             if (sessionBroken) return; // Don't count if session already broken
             
             const catScene = document.getElementById('catScene');
             const wakeMessage = document.getElementById('wakeMessage');
             
-            disturbanceCount++;
-            
             catScene.className = 'cat-scene awake';
             
             // Different messages based on disturbance count
-            if (disturbanceCount === 1) {
-                wakeMessage.innerHTML = '😾 Meow! Your cat is annoyed<br><small>Let it go back to sleep</small>';
-                wakeMessage.style.background = 'rgba(255, 193, 7, 0.9)'; // Yellow warning
-            } else if (disturbanceCount === 2) {
-                wakeMessage.innerHTML = '😡 Your cat is getting ANGRY!<br><small>One more time and you fail!</small>';
-                wakeMessage.style.background = 'rgba(255, 152, 0, 0.9)'; // Orange warning
-            } else {
-                // 3rd disturbance - session broken
-                sessionBroken = true;
-                wakeMessage.innerHTML = '🤬 SESSION FAILED!<br><small>Your cat is FURIOUS! Start over!</small>';
-                wakeMessage.style.background = 'rgba(255, 0, 0, 0.9)'; // Red failure
-                wakeMessage.classList.add('streak-broken');
-                
-                // Stop the timer
-                clearInterval(timerInterval);
-                isRunning = false;
-                
-                // Update status
-                const urlParams = new URLSearchParams(window.location.search);
-                const mode = urlParams.get('mode');
-                if (mode !== 'cat') {
-                    document.getElementById('statusText').textContent = '💥 Focus session failed! Your cat is too angry to continue.';
+            if (timeSinceLastWake > wakeDebounceTime) {
+                disturbanceCount++;
+                lastWakeTime = now;
+
+                if (disturbanceCount === 1) {
+                    wakeMessage.innerHTML = '😾 Meow! Your cat is annoyed<br><small>Let it go back to sleep</small>';
+                    wakeMessage.style.background = 'rgba(255, 193, 7, 0.9)'; // Yellow warning
+                } else if (disturbanceCount === 2) {
+                    wakeMessage.innerHTML = '😡 Your cat is getting ANGRY!<br><small>One more time and you fail!</small>';
+                    wakeMessage.style.background = 'rgba(255, 152, 0, 0.9)'; // Orange warning
+                } else {
+                    // 3rd disturbance - session broken
+                    sessionBroken = true;
+                    wakeMessage.innerHTML = '🤬 SESSION FAILED!<br><small>Your cat is FURIOUS! Start over!</small>';
+                    wakeMessage.style.background = 'rgba(255, 0, 0, 0.9)'; // Red failure
+                    wakeMessage.classList.add('streak-broken');
+                    
+                    // Stop the timer
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    
+                    // Update status
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const mode = urlParams.get('mode');
+                    if (mode !== 'cat') {
+                        document.getElementById('statusText').textContent = '💥 Focus session failed! Your cat is too angry to continue.';
+                    }
+                    
+                    // Play angry meow sound
+                    playMeowSound();
+                    
+                    // Strong vibration for failure
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200, 100, 200]);
+                    }
+                    
+                    // Show message longer for failure
+                    wakeMessage.classList.add('show');
+                    setTimeout(() => {
+                        wakeMessage.classList.remove('show');
+                    }, 5000);
+                    
+                    return; // Exit early, don't set sleep timer
                 }
+            
+                wakeMessage.classList.add('show');
                 
-                // Play angry meow sound
+                // Play meow sound
                 playMeowSound();
                 
-                // Strong vibration for failure
+                // Add haptic feedback
                 if (navigator.vibrate) {
-                    navigator.vibrate([200, 100, 200, 100, 200]);
+                    const vibrationPattern = disturbanceCount === 1 ? [100] : [100, 50, 100];
+                    navigator.vibrate(vibrationPattern);
                 }
                 
-                // Show message longer for failure
-                wakeMessage.classList.add('show');
+                // Clear existing timeout
+                clearTimeout(activityTimeout);
+                
+                // Hide wake message after 2 seconds
                 setTimeout(() => {
                     wakeMessage.classList.remove('show');
-                }, 5000);
-                
-                return; // Exit early, don't set sleep timer
+                }, 2000);
             }
-            
-            wakeMessage.classList.add('show');
-            
-            // Play meow sound
-            playMeowSound();
-            
-            // Add haptic feedback
-            if (navigator.vibrate) {
-                const vibrationPattern = disturbanceCount === 1 ? [100] : [100, 50, 100];
-                navigator.vibrate(vibrationPattern);
-            }
-            
-            // Clear existing timeout
-            clearTimeout(activityTimeout);
-            
-            // Hide wake message after 2 seconds
-            setTimeout(() => {
-                wakeMessage.classList.remove('show');
-            }, 2000);
-            
             // Set cat back to sleeping after 3 seconds of no activity
+            clearTimeout(activityTimeout);
             activityTimeout = setTimeout(() => {
                 if (!sessionBroken) {
                     catScene.className = 'cat-scene sleeping';
@@ -1094,13 +1102,20 @@
         }
 
         // Event listeners for activity detection
-        document.addEventListener('touchstart', wakeUpCat, { passive: false });
         document.addEventListener('touchmove', wakeUpCat, { passive: false });
         document.addEventListener('touchend', wakeUpCat, { passive: false });
         document.addEventListener('mousemove', wakeUpCat);
-        document.addEventListener('mousedown', wakeUpCat);
         document.addEventListener('keydown', wakeUpCat);
         document.addEventListener('scroll', wakeUpCat, { passive: false });
+        // Initialize audio on first user interaction
+        document.addEventListener('touchstart', function initAudioOnTouch() {
+            initializeAudio();
+            document.removeEventListener('touchstart', initAudioOnTouch);
+        }, { once: true });
+        document.addEventListener('mousedown', function initAudioOnClick() {
+            initializeAudio();
+            document.removeEventListener('mousedown', initAudioOnClick);
+        }, { once: true });
 
     </script>
 </body>
