@@ -470,6 +470,27 @@
             border: 2px solid #ff0000;
         }
 
+        .disturbance-counter {
+            position: absolute;
+            top: 50px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .disturbance-counter.warning {
+            background: rgba(255, 193, 7, 0.3);
+            color: #ffc107;
+        }
+
+        .disturbance-counter.danger {
+            background: rgba(255, 152, 0, 0.3);
+            color: #ff9800;
+        }
+
         /* Mobile optimizations */
         @media (max-width: 768px) {
             body {
@@ -733,6 +754,13 @@
             </div>
         </div>
     </div>
+    <div class="disturbance-counter" id="disturbanceCounter" style="display: none;">
+        Strikes: <span id="strikeCount">0</span>/2
+    </div>
+
+    <audio id="meowSound" preload="auto" style="display: none;">
+        <source src="334435__ebcrosby__cat-meow-3.wav" type="audio/wav">
+    </audio>
 
     <script>
         let focusMinutes = 25;
@@ -743,6 +771,9 @@
         let lastActivity = Date.now();
         let activityTimeout = null;
         let wakeLock = null;
+        let disturbanceCount = 0;
+        let maxDisturbances = 2;
+        let sessionBroken = false;
 
         // Tab switching
         function showTab(tabName) {
@@ -786,62 +817,75 @@
 
         // Start focus session
         function startFocusSession() {
+            // Reset disturbance counter when starting new session
+            disturbanceCount = 0;
+            sessionBroken = false;
+            
+            // Reset cat to sleeping
+            document.getElementById('catScene').className = 'cat-scene sleeping';
+            
             // In cat mode, don't read from inputs - use already set values
             const urlParams = new URLSearchParams(window.location.search);
             const mode = urlParams.get('mode');
             
             if (mode !== 'cat') {
-                // Normal mode - read from inputs
                 focusMinutes = parseInt(document.getElementById('minutes').value) || 25;
                 focusSeconds = parseInt(document.getElementById('seconds').value) || 0;
                 totalSeconds = focusMinutes * 60 + focusSeconds;
             }
-            // In cat mode, totalSeconds is already set by loadFromURL()
-            
-            console.log('Starting focus session with:', totalSeconds, 'seconds'); // Debug
             
             if (isRunning) {
                 // Stop current session
                 clearInterval(timerInterval);
                 isRunning = false;
+                disturbanceCount = 0; // Reset on stop
+                sessionBroken = false;
                 if (mode !== 'cat') {
                     document.getElementById('statusText').textContent = 'Focus session stopped.';
                 }
                 return;
             }
-        
+
             // Start new session
             isRunning = true;
             if (mode !== 'cat') {
-                document.getElementById('statusText').textContent = 'Focus session started! Switch to Focus tab and keep your phone still.';
+                document.getElementById('statusText').textContent = 'Focus session started! You have 2 chances before your cat gets too angry.';
             }
             
             timerInterval = setInterval(() => {
-                if (totalSeconds > 0) {
+                if (totalSeconds > 0 && !sessionBroken) {
                     totalSeconds--;
                     updateTimerDisplay();
-                } else {
+                } else if (totalSeconds <= 0) {
                     // Session complete
                     clearInterval(timerInterval);
                     isRunning = false;
+                    disturbanceCount = 0; // Reset on completion
+                    sessionBroken = false;
                     if (mode !== 'cat') {
                         document.getElementById('statusText').textContent = '🎉 Focus session complete! Great job!';
                     }
                     showCompletionMessage();
                 }
             }, 1000);
-        
+
             updateTimerDisplay();
         }
-
         // Reset timer
         function resetTimer() {
             clearInterval(timerInterval);
             isRunning = false;
+            sessionBroken = false;
+            disturbanceCount = 0; // Reset disturbance counter
+            
             focusMinutes = parseInt(document.getElementById('minutes').value) || 25;
             focusSeconds = parseInt(document.getElementById('seconds').value) || 0;
             totalSeconds = focusMinutes * 60 + focusSeconds;
             updateTimerDisplay();
+            
+            // Reset cat to sleeping
+            document.getElementById('catScene').className = 'cat-scene sleeping';
+            
             document.getElementById('statusText').textContent = 'Timer reset. Ready to start a new focus session.';
         }
 
@@ -869,20 +913,79 @@
             lastActivity = now;
         }
 
+        function playMeowSound() {
+            const audio = document.getElementById('meowSound');
+            if (audio) {
+                audio.currentTime = 0; // Reset to start
+                audio.play().catch(e => {
+                    console.log('Could not play sound:', e);
+                });
+            }
+        }
+
         // Wake up cat
         function wakeUpCat() {
+            if (sessionBroken) return; // Don't count if session already broken
+            
             const catScene = document.getElementById('catScene');
             const wakeMessage = document.getElementById('wakeMessage');
             
+            disturbanceCount++;
+            
             catScene.className = 'cat-scene awake';
-            wakeMessage.innerHTML = '😡 Your cat is FURIOUS!<br><small>You disturbed its peaceful sleep!</small>';
+            
+            // Different messages based on disturbance count
+            if (disturbanceCount === 1) {
+                wakeMessage.innerHTML = '😾 Meow! Your cat is annoyed<br><small>Let it go back to sleep</small>';
+                wakeMessage.style.background = 'rgba(255, 193, 7, 0.9)'; // Yellow warning
+            } else if (disturbanceCount === 2) {
+                wakeMessage.innerHTML = '😡 Your cat is getting ANGRY!<br><small>One more time and you fail!</small>';
+                wakeMessage.style.background = 'rgba(255, 152, 0, 0.9)'; // Orange warning
+            } else {
+                // 3rd disturbance - session broken
+                sessionBroken = true;
+                wakeMessage.innerHTML = '🤬 SESSION FAILED!<br><small>Your cat is FURIOUS! Start over!</small>';
+                wakeMessage.style.background = 'rgba(255, 0, 0, 0.9)'; // Red failure
+                wakeMessage.classList.add('streak-broken');
+                
+                // Stop the timer
+                clearInterval(timerInterval);
+                isRunning = false;
+                
+                // Update status
+                const urlParams = new URLSearchParams(window.location.search);
+                const mode = urlParams.get('mode');
+                if (mode !== 'cat') {
+                    document.getElementById('statusText').textContent = '💥 Focus session failed! Your cat is too angry to continue.';
+                }
+                
+                // Play angry meow sound
+                playMeowSound();
+                
+                // Strong vibration for failure
+                if (navigator.vibrate) {
+                    navigator.vibrate([200, 100, 200, 100, 200]);
+                }
+                
+                // Show message longer for failure
+                wakeMessage.classList.add('show');
+                setTimeout(() => {
+                    wakeMessage.classList.remove('show');
+                }, 5000);
+                
+                return; // Exit early, don't set sleep timer
+            }
+            
             wakeMessage.classList.add('show');
             
-            // Add haptic feedback on mobile
+            // Play meow sound
+            playMeowSound();
+            
+            // Add haptic feedback
             if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
+                const vibrationPattern = disturbanceCount === 1 ? [100] : [100, 50, 100];
+                navigator.vibrate(vibrationPattern);
             }
-          
             
             // Clear existing timeout
             clearTimeout(activityTimeout);
@@ -894,72 +997,13 @@
             
             // Set cat back to sleeping after 3 seconds of no activity
             activityTimeout = setTimeout(() => {
-                catScene.className = 'cat-scene sleeping';
+                if (!sessionBroken) {
+                    catScene.className = 'cat-scene sleeping';
+                }
             }, 3000);
             
             lastActivity = Date.now();
         }
-
-        // Event listeners for activity detection
-        document.addEventListener('touchstart', wakeUpCat, { passive: false });
-        document.addEventListener('touchmove', wakeUpCat, { passive: false });
-        document.addEventListener('touchend', wakeUpCat, { passive: false });
-        document.addEventListener('mousemove', wakeUpCat);
-        document.addEventListener('mousedown', wakeUpCat);
-        document.addEventListener('keydown', wakeUpCat);
-        document.addEventListener('scroll', wakeUpCat, { passive: false });
-
-        // Add page visibility detection
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
-                // User switched away from the app
-                wakeUpCat();
-                console.log('User left the app - cat is not happy!');
-            } else {
-                // User returned to the app
-                console.log('User returned to the app');
-            }
-        });
-
-        // Prevent zoom and scrolling on mobile
-        document.addEventListener('gesturestart', function(e) {
-            e.preventDefault();
-        });
-        
-        document.addEventListener('gesturechange', function(e) {
-            e.preventDefault();
-        });
-        
-        document.addEventListener('gestureend', function(e) {
-            e.preventDefault();
-        });
-
-        // Prevent default touch behaviors that might interfere
-        document.addEventListener('touchstart', function(e) {
-            if (e.target.closest('.focus-container')) {
-                e.preventDefault();
-            }
-        });
-
-        // Initialize
-        updateTimerDisplay();
-        
-        // Update input values on change
-        document.getElementById('minutes').addEventListener('input', function() {
-            if (!isRunning) {
-                focusMinutes = parseInt(this.value) || 25;
-                totalSeconds = focusMinutes * 60 + parseInt(document.getElementById('seconds').value || 0);
-                updateTimerDisplay();
-            }
-        });
-
-        document.getElementById('seconds').addEventListener('input', function() {
-            if (!isRunning) {
-                focusSeconds = parseInt(this.value) || 0;
-                totalSeconds = parseInt(document.getElementById('minutes').value || 25) * 60 + focusSeconds;
-                updateTimerDisplay();
-            }
-        });
 
         function generateQR() {
             const minutes = parseInt(document.getElementById('minutes').value) || 25;
@@ -1048,6 +1092,15 @@
         if (window.location.search.includes('mode=cat')) {
             loadFromURL();
         }
+
+        // Event listeners for activity detection
+        document.addEventListener('touchstart', wakeUpCat, { passive: false });
+        document.addEventListener('touchmove', wakeUpCat, { passive: false });
+        document.addEventListener('touchend', wakeUpCat, { passive: false });
+        document.addEventListener('mousemove', wakeUpCat);
+        document.addEventListener('mousedown', wakeUpCat);
+        document.addEventListener('keydown', wakeUpCat);
+        document.addEventListener('scroll', wakeUpCat, { passive: false });
 
     </script>
 </body>
